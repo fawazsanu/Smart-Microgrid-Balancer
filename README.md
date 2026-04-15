@@ -12,11 +12,11 @@ This simulation creates a live microgrid where multiple power generators and con
 
 ## Features
 
-- **Concurrent generation** — Solar and wind sources run as independent threads with randomised output to simulate real-world variability
-- **Priority-based load balancing** — Three-tier consumer priority system (Hospital → Residential → Industrial)
-- **Critical priority override** — Priority-1 consumers are always powered, even during brownout conditions
-- **Live grid status** — Real-time supply/demand display with brownout risk alerts
-- **Graceful shutdown** — `KeyboardInterrupt` cleanly stops all threads
+- **Concurrent generation**: Solar and wind sources run as independent threads with randomised output to simulate real-world variability
+- **Priority-based load balancing**: Three-tier consumer priority system (Hospital → Residential → Industrial)
+- **Critical priority override**: Priority-1 consumers are always powered, even during brownout conditions
+- **Live grid status**: Real-time supply/demand display with brownout risk alerts
+- **Graceful shutdown**: `KeyboardInterrupt` cleanly stops all threads
 
 ---
 
@@ -71,7 +71,7 @@ Press `Ctrl+C` to shut down the grid cleanly.
 
 ## Design Notes
 
-**Generator cycle model:** Each generator thread adds power to the grid, sleeps for a cycle duration, then subtracts that same amount before generating a new value. This models discrete generation intervals rather than continuous output — a deliberate simplification for simulation clarity.
+**Generator cycle model:** Each generator thread adds power to the grid, sleeps for a cycle duration, then subtracts that same amount before generating a new value. This models discrete generation intervals rather than continuous output, a deliberate simplification for simulation clarity.
 
 **Demand accounting:** Consumers hold their demand value in `total_demand` for approximately 2 seconds (simulating power consumption), then release it. The lock ensures the supply-vs-demand check and demand increment are atomic.
 
