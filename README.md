@@ -1,87 +1,79 @@
-# Smart Microgrid Distributed Load Balancer
-
-A multithreaded Python simulation of a priority-based smart power grid, modelling concurrent renewable energy generation and load balancing across consumers with different priority levels.
-
----
+# Smart Microgrid Balancer
 
 ## Overview
+A multi-threaded simulation of a smart power microgrid with dynamic load balancing. Models concurrent energy generation from renewable sources (solar and wind) and consumption from prioritised consumers, with real-time brownout detection and automatic load shedding.
 
-This simulation creates a live microgrid where multiple power generators and consumers run as independent threads. When supply is insufficient to meet total demand, the grid applies a priority-based throttling policy — protecting critical infrastructure (e.g., hospitals) while disconnecting lower-priority loads (e.g., industrial consumers).
-
----
-
-## Features
-
-- **Concurrent generation**: Solar and wind sources run as independent threads with randomised output to simulate real-world variability
-- **Priority-based load balancing**: Three-tier consumer priority system (Hospital → Residential → Industrial)
-- **Critical priority override**: Priority-1 consumers are always powered, even during brownout conditions
-- **Live grid status**: Real-time supply/demand display with brownout risk alerts
-- **Graceful shutdown**: `KeyboardInterrupt` cleanly stops all threads
+**Tech Stack:** Python · Threading · Concurrency
 
 ---
 
-## Architecture
+## How It Works
+
+### Architecture
+The simulation runs entirely on concurrent threads, each representing a real-world grid component operating independently and simultaneously:
+
+| Thread | Role | Generation/Demand |
+|---|---|---|
+| Solar Farm | Generator | 20–100 kW (random, cyclic) |
+| Wind Turbine | Generator | 10–60 kW (random, cyclic) |
+| City Hospital | Consumer — Priority 1 | 15–40 kW |
+| Residential Zone A | Consumer — Priority 2 | 15–40 kW |
+| Steel Factory | Consumer — Priority 3 | 15–40 kW |
+
+### Load Balancing Logic
+The grid applies a **priority-based load shedding** algorithm when supply is insufficient:
 
 ```
-SmartGrid (shared state, mutex-protected)
-├── solar_farm         [Thread] — generates 20–100 kW per cycle (2s)
-├── wind_turbine       [Thread] — generates 10–60 kW per cycle (3s)
-├── power_consumer     [Thread] — City Hospital    (Priority 1 — Critical)
-├── power_consumer     [Thread] — Residential Zone A (Priority 2 — Standard)
-└── power_consumer     [Thread] — Steel Factory    (Priority 3 — Low)
+IF supply >= demand:
+    → Serve all consumers (Normal Operation)
+ELIF consumer priority == 1 (Critical):
+    → Serve regardless of supply (Critical Override)
+ELSE:
+    → Throttle consumer (disconnect to protect grid stability)
 ```
 
-All access to `total_supply` and `total_demand` is protected by a `threading.Lock` (`grid_lock`) to prevent race conditions.
+This mirrors real-world grid management where hospitals and emergency services maintain power during brownout conditions while lower-priority loads are shed.
+
+### Thread Safety
+All reads and writes to shared grid state (`total_supply`, `total_demand`) are protected by a `threading.Lock()` to prevent race conditions. This ensures grid status reporting is always consistent even under concurrent updates.
 
 ---
 
-## Priority Levels
+## Grid Status Output
+The simulation prints a live updating status line:
 
-| Priority | Label    | Behaviour under shortage         |
-|----------|----------|----------------------------------|
-| 1        | Critical | Always powered (override)        |
-| 2        | Standard | Powered only when supply permits |
-| 3        | Low      | First to be throttled            |
-
----
-
-## Requirements
-
-- Python 3.6+
-- Standard library only (`threading`, `time`, `random`)
+```
+[GRID STATUS] Supply: 73.45kW | Demand: 58.20kW | STABLE
+[GRID STATUS] Supply: 18.30kW | Demand: 62.10kW | BROWNOUT RISK
+[!] THROTTLING: Steel Factory disconnected to save grid stability.
+```
 
 ---
 
 ## Usage
 
+**1. No dependencies required** — uses Python standard library only.
+
+**2. Run the simulation:**
 ```bash
 python smart_grid_sim.py
 ```
 
-The simulation runs continuously, printing a live status line:
-
-```
-[GRID STATUS] Supply: 73.45kW | Demand: 62.10kW | STABLE
-[!] THROTTLING: Steel Factory disconnected to save grid stability.
-```
-
-Press `Ctrl+C` to shut down the grid cleanly.
+**3. Stop with** `Ctrl+C`, the simulation shuts down cleanly, joining all threads before exit.
 
 ---
 
-## Design Notes
-
-**Generator cycle model:** Each generator thread adds power to the grid, sleeps for a cycle duration, then subtracts that same amount before generating a new value. This models discrete generation intervals rather than continuous output, a deliberate simplification for simulation clarity.
-
-**Demand accounting:** Consumers hold their demand value in `total_demand` for approximately 2 seconds (simulating power consumption), then release it. The lock ensures the supply-vs-demand check and demand increment are atomic.
-
-**No starvation guarantee for Priority 2:** Standard consumers can be repeatedly throttled if supply consistently falls short. Only Priority 1 is guaranteed service.
+## Key Concepts Demonstrated
+- Multi-threading with `threading.Thread`
+- Mutex locks (`threading.Lock`) for shared state protection
+- Race condition prevention in concurrent systems
+- Priority-based resource allocation algorithms
+- Graceful thread shutdown with `join()`
+- Real-time simulation of dynamic supply/demand systems
 
 ---
 
-## Potential Extensions
-
-- Add battery storage as a buffer thread
-- Implement time-of-day modelling for solar generation curves
-- Log brownout events to a file with timestamps
-- Add a `tkinter` or `matplotlib` live dashboard
+## Limitations & Extensions
+- Generation values are randomised rather than modelled on real solar/wind irradiance curves. A natural extension would integrate real weather data (as done in the [Solar Energy Prediction](https://github.com/fawazsanu/Solar-Energy-Prediction) project) to drive generation values.
+- The simulation runs in real time, a discrete event simulation approach would allow faster-than-real-time modelling.
+- Energy storage (batteries) is not modelled, a buffer system would significantly improve brownout resilience.
